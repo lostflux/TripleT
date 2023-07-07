@@ -10,11 +10,15 @@ edition = "2021"
 
 # tictactoe game library
 [lib]
-name = "game"
+name = "ttt"
 version = "0.1.0"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "main"
-path = "src/main.rs"
+path = "app/main.rs"
+
+
+[dependencies]
+rand = "0.8.4"
