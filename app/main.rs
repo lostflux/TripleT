@@ -1,4 +1,4 @@
-use ttt::game::{Game, Move};
+use ttt::{game::{Game, Move}};
 
 fn main() {
 
