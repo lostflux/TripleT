@@ -2,18 +2,34 @@
 
 use std::fmt::Display;
 use rand::seq::SliceRandom;
-
-pub type Move = (usize, usize);
 use crate::game::Mark::*;
+use wasm_bindgen::prelude::*;
+
+// pub type Move = (usize, usize);
+
+// import everything from moves module
+pub mod moves;
+pub use moves::*;
 
 
-#[derive(Clone, PartialEq)]
+
+#[derive(Clone, Copy, PartialEq)]
+#[wasm_bindgen]
 pub enum Mark {
   X,
   O,
   Empty,
 }
 
+
+
+
+
+
+
+
+
+#[wasm_bindgen]
 pub struct Game {
   state: Vec<Vec<Mark>>,
   current_player: Mark,
@@ -22,11 +38,13 @@ pub struct Game {
   pub dim: usize,
 }
 
+// #[wasm_bindgen]
 impl Game {
 
   /// Create a new game instance with given dimension.
   /// 
   /// The board will have dimension `dim` x `dim`.
+  // #[wasm_bindgen(constructor)]
   pub fn new(dim: usize) -> Game {
     Game {
       state: vec![vec![Empty; dim]; dim],
@@ -45,7 +63,8 @@ impl Game {
     for i in 0..self.dim {
       for j in 0..self.dim {
         if self.get(i, j) == Empty {
-          moves.push((i, j));
+          let new_move = Move::new(i, j);
+          moves.push(new_move);
         }
       }
     }
@@ -84,8 +103,8 @@ impl Game {
       let mut rdiag = true;
       let n = self.state.len();
       for i in 0..n {
-        row &= self.state[new_move.0][i] == self.current_player;
-        col &= self.state[i][new_move.1] == self.current_player;
+        row &= self.state[new_move.x][i] == self.current_player;
+        col &= self.state[i][new_move.y] == self.current_player;
         diag &= self.state[i][i] == self.current_player;
         rdiag &= self.state[i][n - i - 1] == self.current_player;
       }
@@ -117,6 +136,7 @@ impl Game {
   /// game.make_move((0, 0));
   /// println!("{}", game);
   /// ```
+  /// 
   pub fn make_move(&mut self, new_move: Move) {
     if self.is_valid_move(new_move) {
       self.update_state(new_move);
@@ -138,11 +158,10 @@ impl Game {
   /// assert!(!game.is_valid_move((0, 0)));
   /// ```
   pub fn is_valid_move(&self, new_move: Move) -> bool {
-    let (i, j) = new_move;
     self.is_active()
-      && i < self.dim
-      && j < self.dim
-      && self.get(i, j) == Empty
+      && new_move.x < self.dim
+      && new_move.y < self.dim
+      && self.get(new_move.x, new_move.y) == Empty
   }
 
   /// Check if the game is active,
@@ -162,14 +181,10 @@ impl Game {
   /// 
   /// It can also take the individual coordinates.
   pub fn set(&mut self, new_move: Move, mark: Mark) {
-    let (i, j) = new_move;
-    self.state[i][j] = mark;
+    let i = &new_move.x;
+    let j = &new_move.y;
+    self.state[*i][*j] = mark;
   }
-
-  // fn set(&mut self, i: usize, j: usize, mark: Mark) {
-  //   self.state[i][j] = mark;
-  // }
-
 }
 
 impl Display for Game {
