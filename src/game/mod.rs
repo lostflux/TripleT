@@ -54,6 +54,172 @@ impl Game {
       dim,
     }
   }
+
+  pub fn evaluate(&self) -> i32 {
+    // count the number of rows/columns/diagonals where a player can still win
+    // and there are 1, 2, 3 blanks, etc. and sum them up.
+
+    let mut score = 0;
+    score += self.evaluate_rows();
+    score += self.evaluate_cols();
+    score += self.evaluate_diags();
+    score
+  }
+
+  fn evaluate_rows(&self) -> i32 {
+    // check rows
+    let mut value = 0;
+
+    for row in &self.state {
+      let mut row_mark = Empty;
+      let mut row_value = 0;
+      for i in 0..self.dim {
+        match row[i] {
+          Empty => continue,
+          X => match row_mark {
+            Empty => {
+              row_mark = row[i];
+              row_value = 1;
+            }
+            X => row_value += 1,
+            O => {
+              row_value = 0;
+              break;
+            }
+          }
+          O => match row_mark {
+            Empty => {
+              row_mark = row[i];
+              row_value = 1;
+            }
+            O => row_value += 1,
+            X => {
+              row_value = 0;
+              break;
+            }
+          }
+
+        }
+      }
+      value += row_value;
+    }
+    value
+  }
+
+  fn evaluate_cols(&self) -> i32 {
+    // check cols
+    let mut value = 0;
+
+    for i in 0..self.dim {
+      let mut row_mark = Empty;
+      let mut row_value = 0;
+      for row in &self.state {
+        match row[i] {
+          Empty => continue,
+          X => match row_mark {
+            Empty => {
+              row_mark = row[i];
+              row_value = 1;
+            }
+            X => row_value += 1,
+            O => {
+              row_value = 0;
+              break;
+            }
+          }
+          O => match row_mark {
+            Empty => {
+              row_mark = row[i];
+              row_value = -1;
+            }
+            O => row_value -= 1,
+            X => {
+              row_value = 0;
+              break;
+            }
+          }
+
+        }
+      }
+      value += row_value;
+    }
+    value
+  }
+
+  fn evaluate_diags(&self) -> i32 {
+    // check cols
+    let mut value = 0;
+
+    let mut row_mark1 = Empty;
+    let mut row_mark2 = Empty;
+
+    value += {
+      let mut row_value = 0;
+      for i in 0..self.dim {
+        let mark1 = &self.state[i][i];
+        match mark1 {
+          Empty => continue,
+          X => match row_mark1 {
+            Empty => {
+              row_mark1 = *mark1;
+              row_value = 1;
+            }
+            X => row_value += 1,
+            O => {
+              row_value = 0;
+              break;
+            }
+          }
+          O => match row_mark1 {
+            Empty => {
+              row_mark1 = *mark1;
+              row_value = -1;
+            }
+            O => row_value -= 1,
+            X => {
+              row_value = 0;
+              break;
+            }
+          }
+        }
+      }
+      row_value
+    };
+
+    value += {
+      let mut row_value = 0;
+      for i in 0..self.dim {
+        let mark2 = &self.state[i][self.dim - i - 1];
+        match mark2 {
+          Empty => continue,
+          X => match row_mark2 {
+            Empty => {
+              row_mark2 = *mark2;
+              row_value = 1;
+            }
+            X => row_value += 1,
+            O => {
+              row_value = 0;
+              break;
+            }
+          }
+          O => match row_mark2 {
+            Empty => {
+              row_mark2 = *mark2;
+              row_value = -1;
+            }
+            O => row_value -= 1,
+            X => {
+              row_value = 0;
+              break;
+            }
+          }
+        }
+      }
+      row_value
+    };
+    value
+  }
   
   /// Get a list of all possible moves.
   /// 
@@ -85,10 +251,10 @@ impl Game {
   /// Get a random move from the list of all possible moves.
   /// 
   /// Returns a tuple representing the coordinates of the empty cell.
-  pub fn get_random_move(&self) -> Move {
+  pub fn get_random_move(&self) -> Option<Move> {
     let moves = self.get_moves();
     let mut rng = rand::thread_rng();
-    *moves.choose(&mut rng).unwrap()
+    moves.choose(&mut rng).cloned()
   }
 
   /// Given a new move, applies the move to the board and updates the game state.
@@ -146,16 +312,28 @@ impl Game {
     }
   }
 
+  pub fn undo_move(&mut self, new_move: Move) {
+    if self.is_valid_move(new_move) {
+      panic!("Undoing an empty move!");
+    } else {
+      self.set(new_move, Empty);
+      self.is_over = false;
+      self.winner = Empty;
+      self.toggle_player();
+    }
+  }
+
   /// Check if a move is valid.
   /// 
   /// # Examples
   /// ```
-  /// use ttt::game::Game;
+  /// use ttt::game::*;
   /// 
   /// let mut game = Game::new(3);
-  /// assert!(game.is_valid_move((0, 0)));
-  /// game.make_move((0, 0));
-  /// assert!(!game.is_valid_move((0, 0)));
+  /// let new_move = Move::new(0, 0);
+  /// assert!(game.is_valid_move(new_move.clone()));
+  /// game.make_move(new_move.clone());
+  /// assert!(!game.is_valid_move(new_move));
   /// ```
   pub fn is_valid_move(&self, new_move: Move) -> bool {
     self.is_active()
